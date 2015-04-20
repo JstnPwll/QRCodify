@@ -15,7 +15,7 @@ from enum import Enum
 
 
 CACHE_SIZE       = 200
-SEARCH_TERM = re.compile('/u/%s\b' % REDDIT_USERNAME, re.I)
+SEARCH_TERM = re.compile(r'/u/%s\b' % REDDIT_USERNAME, re.I)
 DATA_BLOCKS = {'10':'▀','01':'▄','11':'█','00':' '}
 
 
