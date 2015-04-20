@@ -1,0 +1,2 @@
+python QRCodify.py %*
+pause
