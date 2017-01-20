@@ -1,3 +1,4 @@
+# -*- coding: UTF-8 -*-
 #!/usr/bin/python
 import praw
 import pdb
@@ -31,9 +32,11 @@ def main():
 
     # Create the Reddit instance
     user_agent = ("Automated comment for /u/"+REDDIT_USERNAME)
-    r = praw.Reddit(user_agent=user_agent)
-    # and login
-    r.login(REDDIT_USERNAME, REDDIT_PASS)
+    r = praw.Reddit(client_id=REDDIT_CLIENT_ID,
+                     client_secret=REDDIT_CLIENT_SECRET,
+                     user_agent=user_agent,
+                     username=REDDIT_USERNAME,
+                     password=REDDIT_PASS)
 
     cache = deque(maxlen=CACHE_SIZE) # double-ended queue
     sub_wait = {} # rate limit wait times for subreddits
@@ -42,34 +45,42 @@ def main():
     running = True
     while running:    
         try:
-            mentions = r.get_unread()
+            unread = r.inbox.unread()
 
-            #Check new mentions
-            for m in mentions:
+            m_ids = []
+            #Check new unread mentions
+            for m in unread:
                 if m.id in cache:
                     continue
-                if m.subject != 'username mention':
-                    m.mark_as_read();
-                    continue
+
+                if(m.subject != 'username mention'):
+                    m.mark_read();
                 
                 if check_sub_wait(m.subreddit, sub_wait):
                     continue
 
                 #Add this to our cache
+                m_ids.append(m.id)
                 cache.append(m.id)
-                current_sub = m.subreddit
+            #Now match mentions to the unread ids
+            if(len(m_ids) > 0):
+                mentions = r.inbox.mentions(limit=len(m_ids)*2)
+                for m in mentions:
+                    if m.id not in m_ids:
+                        continue
+                    current_sub = m.subreddit
 
-                for reply in m.replies:
-                        if reply.author.name == REDDIT_USERNAME:
-                            already_done.add(m.id)
-                
-                #Process the message    
-                if m.id not in already_done:
-                    #Build reply and send
-                    text = parse_comment(m.body)
-                    replyto(m, text, already_done)
-                    #Mark as read
-                    m.mark_as_read();
+                    for reply in m._replies:
+                            if reply.author.name == REDDIT_USERNAME:
+                                already_done.add(m.id)
+                    
+                    #Process the message    
+                    if m.id not in already_done:
+                        #Build reply and send
+                        text = parse_comment(m.body)
+                        replyto(m, text, already_done)
+                        #Mark as read
+                        m.mark_read();
                     
             
             sleep(SLEEP_TIME)
@@ -77,7 +88,7 @@ def main():
         except KeyboardInterrupt:
             running = False
 
-        except praw.errors.RateLimitExceeded as pe:
+        except praw.exceptions.APIException as pe:
             print(now.strftime("%m-%d-%Y %H:%M"))
             print('ERROR:', pe)
             add_sub_wait(pe.sleep_time, current_sub, sub_wait)
@@ -126,6 +137,8 @@ def build_qrcode(data):
     text = ''
     code = pyqrcode.create(data).text()
     lines = code.split('\n')
+    if lines[-1] == '':
+        del lines[-1]
     for i in range(int(len(lines)/2)):
         text += '    '
         for j in range(len(lines[i*2])):
@@ -136,7 +149,7 @@ def build_qrcode(data):
 #replies to given comment
 def replyto(c, text, done):
     now = datetime.datetime.now()
-    print((len(done) + 1), 'ID:', c.id, 'Author:', c.author.name, 'r/' + str(c.subreddit.display_name), 'Title:', c.submission.title)
+    print((len(done) + 1), 'ID:', c.id, 'Author:', c.author.name, 'r/' + str(c.subreddit.display_name), 'Title:', c.link_title)
     print (now.strftime("%m-%d-%Y %H:%M"), '\n')
 
 

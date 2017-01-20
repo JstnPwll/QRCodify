@@ -7,6 +7,10 @@
 REDDIT_USERNAME = '' 
 # Your Reddit password as a string
 REDDIT_PASS = ''
+# Reddit API client ID
+REDDIT_CLIENT_ID = ''
+# Reddit API client secret
+REDDIT_CLIENT_SECRET = ''
 # How long to sleep between fetches (in seconds)
 SLEEP_TIME = 5
 # How long to sleep when an error occurs (in seconds)
